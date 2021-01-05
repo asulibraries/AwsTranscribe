@@ -1,0 +1,26 @@
+#index:
+#    path: /
+#    controller: App\Controller\DefaultController::index
+app_transcribe_number:
+        path: /transcribe/number
+        controller: App\Controller\TranscribeController::number
+
+app_transcribe_get_jobs:
+        path: /transcribe/get_jobs
+        controller: App\Controller\TranscribeController::getTranscriptions
+
+app_transcribe_create_job:
+        path: /transcribe/create_job
+        controller: App\Controller\TranscribeController::createJob
+
+app_transcribe_get_job:
+        path: /transcribe/get_job/{job_name}
+        controller: App\Controller\TranscribeController::getTranscription
+
+app_transcribe_get_job_json:
+        path: /transcribe/get_job_json/{job_name}
+        controller: App\Controller\TranscribeController::getTranscriptJson
+
+app_transcribe_start_job:
+        path: /transcribe/startJob
+        controller: App\Controller\TranscribeController::startJobFromDrupal
