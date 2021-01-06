@@ -230,29 +230,4 @@ class TranscribeController {
 
   }
 
-  /**
-   * Test function, should be removed
-   */
-  public function testfromhere()
-  {
-    $digest = "62fcfb58ec66ceb6aecedc50a13dd2a184f14791";
-    $infile = "/var/www/html/AwsTranscribe/var/infiles/" . $digest . "_infile.json";
-    $outfile = "/var/www/html/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
-    $py_command = "/usr/bin/python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
-    try {
-      exec($py_command, $output, $retval);
-      $this->log->info("Python script returned with status " . $retval . " and output: \n");
-      $this->log->info(print_r($output, TRUE));
-      return new Response(
-        file_get_contents($outfile),
-        200,
-        ['Content-Type' => 'text/plain']
-      );
-    } catch (\RuntimeException $e) {
-      $this->log->error("RuntimeException:", ['exception' => $e]);
-      $this->log->error("Failed executing python script");
-      return new Response($e->getMessage(), 500);
-    }
-  }
 }
-
