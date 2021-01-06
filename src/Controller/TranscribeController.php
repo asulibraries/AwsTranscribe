@@ -192,6 +192,7 @@ class TranscribeController {
       }
 
       // If we made it here the job completed successfully.
+      $this->log->info("transcription job completed");
       $transcript_url = $status->get('TranscriptionJob')['Transcript']['TranscriptFileUri'];
       $client = new Client();
       $json = $client->get($transcript_url);
@@ -200,6 +201,7 @@ class TranscribeController {
       $fp = fopen($infile, 'w');
       fwrite($fp, json_encode($json_body));
       fclose($fp);
+      $this->log->info("wrote the transcript json file to disk");
       $outfile = $digest . "_outfile.srt";
       $py_command = "python3 awstosrt.py " . $infile . " " . $outfile;
       try {
@@ -214,11 +216,13 @@ class TranscribeController {
       }
       catch (\RuntimeException $e) {
         $this->log->error("RuntimeException:", ['exception' => $e]);
+	$this->log->error("Failed executing python script");
         return new Response($e->getMessage(), 500);
       }
     }
     catch (\RuntimeException $e) {
       $this->log->error("RuntimeException:", ['exception' => $e]);
+      $this->log->error("Failed to start and  get the transcription job results and process them");
       return new Response($e->getMessage(), 500);
     }
 
