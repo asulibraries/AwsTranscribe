@@ -205,7 +205,7 @@ class TranscribeController {
       // fclose($fp);
       $this->log->info("wrote the transcript json file to disk");
       $outfile = "/var/www/html/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
-      $py_command = "python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
+      $py_command = "/usr/bin/python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
       try {
         exec($py_command, $output, $retval);
         $this->log->info("Python script returned with status " . $retval . " and output: \n");
@@ -238,7 +238,7 @@ class TranscribeController {
     $digest = "62fcfb58ec66ceb6aecedc50a13dd2a184f14791";
     $infile = "/var/www/html/AwsTranscribe/var/infiles/" . $digest . "_infile.json";
     $outfile = "/var/www/html/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
-    $py_command = "python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
+    $py_command = "/usr/bin/python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
     try {
       exec($py_command, $output, $retval);
       $this->log->info("Python script returned with status " . $retval . " and output: \n");
