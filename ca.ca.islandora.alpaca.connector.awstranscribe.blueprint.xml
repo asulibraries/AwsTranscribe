@@ -12,7 +12,7 @@
     <cm:default-properties>
       <cm:property name="error.maxRedeliveries" value="5"/>
       <cm:property name="in.stream" value="activemq:queue:islandora-connector-awstranscribe"/>
-      <cm:property name="derivative.service.url" value="http://localhost:8001/transcribe/startJob"/>
+      <cm:property name="derivative.service.url" value="http://localhost/transcribe/startJob"/>
     </cm:default-properties>
   </cm:property-placeholder>
 
