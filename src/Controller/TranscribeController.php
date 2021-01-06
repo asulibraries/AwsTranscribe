@@ -53,6 +53,13 @@ class TranscribeController {
   }
 
   /**
+   * Index.
+   */
+  public function index(): Response {
+    return new Response('<html><body>AWS Transcribe microservice is up and running!</body></html');
+  }
+
+  /**
    * Random number function.
    */
   public function number(): Response {
