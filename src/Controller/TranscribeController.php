@@ -156,6 +156,18 @@ class TranscribeController {
       'version' => 'latest',
       'region' => 'us-east-1',
     ]);
+    $filesystem = new Filesystem();
+    $infile = "/var/www/html/AwsTranscribe/var/infiles/" . $digest . "_infile.json";
+    $outfile = "/var/www/html/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
+
+    if ($filesystem->exists($outfile)) {
+      $this->log->info("Caption file already exists - return it");
+      return new Response(
+        file_get_contents($outfile),
+        200,
+        ['Content-Type' => 'text/plain']
+      );
+    }
 
     // Return response.
     try {
@@ -192,10 +204,8 @@ class TranscribeController {
       $client = new Client();
       $json = $client->get($transcript_url);
       $json_body = $json->getBody();
-      $infile = "/var/www/html/AwsTranscribe/var/infiles/" . $digest . "_infile.json";
-      $filesystem = new Filesystem();
       try {
-        $filesystem->appendToFile($infile, $json_body);
+        $filesystem->dumpFile($infile, $json_body);
       } catch (IOExceptionInterface $exception) {
         $this->log->error("Could not write json to file");
         $this->log->error($exception);
@@ -204,7 +214,6 @@ class TranscribeController {
       // fwrite($fp, json_encode($json_body));
       // fclose($fp);
       $this->log->info("wrote the transcript json file to disk");
-      $outfile = "/var/www/html/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
       $py_command = "/usr/bin/python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
       try {
         exec($py_command, $output, $retval);
@@ -218,7 +227,7 @@ class TranscribeController {
       }
       catch (\RuntimeException $e) {
         $this->log->error("RuntimeException:", ['exception' => $e]);
-	$this->log->error("Failed executing python script");
+	      $this->log->error("Failed executing python script");
         return new Response($e->getMessage(), 500);
       }
     }
