@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3dee27721f2ecb2a78dacd7d218726ba",
+    "content-hash": "ab9e965000dcbffe0d5c00e9f1f26823",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
