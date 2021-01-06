@@ -6,6 +6,8 @@ use Aws\TranscribeService\TranscribeServiceClient;
 use Aws\S3\S3Client;
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -200,9 +202,16 @@ class TranscribeController {
       $json = $client->get($transcript_url);
       $json_body = $json->getBody();
       $infile = "/var/www/AwsTranscribe/var/infiles/" . $digest . "_infile.json";
-      $fp = fopen($infile, 'w');
-      fwrite($fp, json_encode($json_body));
-      fclose($fp);
+      $filesystem = new Filesystem();
+      try {
+        $filesystem->appendToFile($infile, $json_body);
+      } catch (IOExceptionInterface $exception) {
+        $this->log->error("Could not write json to file");
+        $this->log->error($exception);
+      }
+      // $fp = fopen($infile, 'w');
+      // fwrite($fp, json_encode($json_body));
+      // fclose($fp);
       $this->log->info("wrote the transcript json file to disk");
       $outfile = "/var/www/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
       $py_command = "python3 awstosrt.py " . $infile . " " . $outfile;
