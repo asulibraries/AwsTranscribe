@@ -173,6 +173,7 @@ class TranscribeController {
         ],
         'LanguageCode' => 'en-US',
       ]);
+      $this->log->info(print_r($result, TRUE));
       $status = [];
       while (TRUE) {
         $status = $transcribeClient->getTranscriptionJob([
