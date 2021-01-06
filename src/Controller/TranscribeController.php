@@ -152,15 +152,6 @@ class TranscribeController {
     $digest = str_replace('sha=', '', $digest);
     $digest = str_replace('sha%3D', '', $digest);
     $this->log->info($digest);
-    // $s3Client = new S3Client([
-    //   'version' => 'latest',
-    //   'region' => 'us-east-1',
-    // ]);
-    // $s3_info = $s3Client->headObject([
-    //   'Bucket' => $this->s3Bucket,
-    //   'Key' => $digest,
-    //   ]);
-    // $this->log->info(print_r($s3_info, TRUE));
     $transcribeClient = new TranscribeServiceClient([
       'version' => 'latest',
       'region' => 'us-east-1',
@@ -214,7 +205,7 @@ class TranscribeController {
       // fclose($fp);
       $this->log->info("wrote the transcript json file to disk");
       $outfile = "/var/www/html/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
-      $py_command = "python3 awstosrt.py " . $infile . " " . $outfile;
+      $py_command = "python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
       try {
         exec($py_command, $output, $retval);
         $this->log->info("Python script returned with status " . $retval . " and output: \n");
@@ -239,4 +230,29 @@ class TranscribeController {
 
   }
 
+  /**
+   * Test function, should be removed
+   */
+  public function testfromhere()
+  {
+    $digest = "62fcfb58ec66ceb6aecedc50a13dd2a184f14791";
+    $infile = "/var/www/html/AwsTranscribe/var/infiles/" . $digest . "_infile.json";
+    $outfile = "/var/www/html/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
+    $py_command = "python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
+    try {
+      exec($py_command, $output, $retval);
+      $this->log->info("Python script returned with status " . $retval . " and output: \n");
+      $this->log->info(print_r($output, TRUE));
+      return new Response(
+        file_get_contents($outfile),
+        200,
+        ['Content-Type' => 'text/plain']
+      );
+    } catch (\RuntimeException $e) {
+      $this->log->error("RuntimeException:", ['exception' => $e]);
+      $this->log->error("Failed executing python script");
+      return new Response($e->getMessage(), 500);
+    }
+  }
 }
+

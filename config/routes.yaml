@@ -24,3 +24,7 @@ app_transcribe_get_job_json:
 app_transcribe_start_job:
         path: /startJob
         controller: App\Controller\TranscribeController::startJobFromDrupal
+
+app_transcribe_test:
+        path: /test
+        controller: App\Controller\TranscribeController::testfromhere
