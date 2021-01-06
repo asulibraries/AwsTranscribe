@@ -67,6 +67,7 @@ class TranscribeController {
     $client = new TranscribeServiceClient([
       'version' => 'latest',
       'region' => 'us-east-1',
+      'profile' => 'default',
     ]);
     $result = $client->listTranscriptionJobs();
     return new Response($result);
