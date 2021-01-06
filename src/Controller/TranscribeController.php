@@ -199,12 +199,12 @@ class TranscribeController {
       $client = new Client();
       $json = $client->get($transcript_url);
       $json_body = $json->getBody();
-      $infile = $digest . "_infile.json";
+      $infile = "/var/www/AwsTranscribe/var/infiles/" . $digest . "_infile.json";
       $fp = fopen($infile, 'w');
       fwrite($fp, json_encode($json_body));
       fclose($fp);
       $this->log->info("wrote the transcript json file to disk");
-      $outfile = $digest . "_outfile.srt";
+      $outfile = "/var/www/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
       $py_command = "python3 awstosrt.py " . $infile . " " . $outfile;
       try {
         exec($py_command, $output, $retval);
