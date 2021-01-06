@@ -10,6 +10,8 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
 
+sys.path.append("/home/ubuntu/.local/lib/python3.6/site-packages")
+
 ''' Parameters to control subtitle behavior.
 See http://bbc.github.io/subtitle-guidelines/ for recommended practices.
 '''
