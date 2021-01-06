@@ -179,7 +179,7 @@ class TranscribeController {
         $status = $transcribeClient->getTranscriptionJob([
           'TranscriptionJobName' => $digest,
         ]);
-	$this->log->info($status->get('TranscriptionJob')['TranscriptionJobStatus']);
+        $this->log->info($status->get('TranscriptionJob')['TranscriptionJobStatus']);
 
         if ($status->get('TranscriptionJob')['TranscriptionJobStatus'] == 'COMPLETED') {
           break;
