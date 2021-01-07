@@ -11,6 +11,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Transcribe Controller.
@@ -144,6 +145,9 @@ class TranscribeController {
 
   /**
    * Start the derivative job from Drupal.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   * @return \Symfony\Component\HttpFoundation\Response|\Symfony\Component\HttpFoundation\StreamedResponse
    */
   public function startJobFromDrupal(Request $request) {
     $this->log->info('Caption request.');
@@ -174,7 +178,7 @@ class TranscribeController {
       $this->log->info("Caption file already exists - return it");
       $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
       foreach ($files as $file) {
-        return new Response(
+        return new StreamedResponse(
           $file->getContents(),
           200,
           [
@@ -248,7 +252,7 @@ class TranscribeController {
         $this->log->info(print_r($output, TRUE));
         $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
         foreach ($files as $file) {
-          return new Response(
+          return new StreamedResponse(
             $file->getContents(),
             200,
             [
