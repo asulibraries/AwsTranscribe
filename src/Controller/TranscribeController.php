@@ -168,9 +168,7 @@ class TranscribeController {
         ['Content-Type' => 'text/plain']
       );
     }
-
-    // Return response.
-    try {
+    if (!$filesystem->exists($infile)) {
       $result = $transcribeClient->startTranscriptionJob([
         'TranscriptionJobName' => $digest,
         'Media' => [
@@ -197,7 +195,10 @@ class TranscribeController {
 
         sleep(5);
       }
+    }
 
+    // Return response.
+    try {
       // If we made it here the job completed successfully.
       $this->log->info("transcription job completed");
       $transcript_url = $status->get('TranscriptionJob')['Transcript']['TranscriptFileUri'];
@@ -206,7 +207,8 @@ class TranscribeController {
       $json_body = $json->getBody();
       try {
         $filesystem->dumpFile($infile, $json_body);
-      } catch (IOExceptionInterface $exception) {
+      }
+      catch (IOExceptionInterface $exception) {
         $this->log->error("Could not write json to file");
         $this->log->error($exception);
       }
@@ -216,8 +218,9 @@ class TranscribeController {
       $this->log->info("wrote the transcript json file to disk");
       $py_command = "/usr/bin/python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
       try {
-        exec($py_command, $output, $retval);
-        $this->log->info("Python script returned with status " . $retval . " and output: \n");
+        $py_command = escapeshellcmd($py_command);
+        $output = shell_exec($py_command); //, $output, $retval);
+        $this->log->info("Python script returned with output: \n");
         $this->log->info(print_r($output, TRUE));
         return new Response(
           file_get_contents($outfile),
