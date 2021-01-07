@@ -170,11 +170,11 @@ class TranscribeController {
     $filesystem = new Filesystem();
     $finder = new Finder();
     $infile = $this->fileRoot . "/" . "infiles/" . $digest . "_infile.json";
-    $outfile = $this->fileRoot . "/" . "outfiles/" . $digest . "_outfile.srt";
+    $outfile = $this->fileRoot . "/" . "outfiles/" . $digest . "_outfile.vtt";
     $this->log->info($outfile);
     if ($filesystem->exists($outfile)) {
       $this->log->info("Caption file already exists - return it");
-      $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
+      $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
       foreach ($files as $file) {
         return new Response(
           $file->getContents(),
@@ -245,7 +245,7 @@ class TranscribeController {
         $output = shell_exec($py_command); //, $output, $retval);
         $this->log->info("Python script returned with output: \n");
         $this->log->info(print_r($output, TRUE));
-        $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
+        $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
         foreach ($files as $file) {
           return new Response(
             $file->getContents(),

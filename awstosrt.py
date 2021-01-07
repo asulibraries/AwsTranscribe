@@ -5,6 +5,7 @@ import logging
 from datetime import timedelta
 
 import srt
+import webvtt
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
@@ -202,3 +203,4 @@ if __name__ == "__main__":
     t = TranscribeToSRT(infile, outfile)
     t.parse()
     t.write()
+    webvtt.from_srt(outfile).save()
