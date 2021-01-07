@@ -36,6 +36,12 @@ class TranscribeController {
   protected $s3Bucket;
 
   /**
+   * @var string
+   *   The file root.
+   */
+  protected $fileRoot;
+
+  /**
    * Controller constructor.
    *
    * @param \Psr\Log\LoggerInterface $log
@@ -48,11 +54,13 @@ class TranscribeController {
   public function __construct(
     LoggerInterface $log,
     string $fedoraBaseUrl,
-    string $s3Bucket
+    string $s3Bucket,
+    string $fileRoot
   ) {
     $this->log = $log;
     $this->fedoraBaseUrl = $fedoraBaseUrl;
     $this->s3Bucket = $s3Bucket;
+    $this->fileRoot = $fileRoot;
   }
 
   /**
@@ -158,19 +166,22 @@ class TranscribeController {
       'region' => 'us-east-1',
     ]);
     $filesystem = new Filesystem();
-    $infile = "/var/www/html/AwsTranscribe/var/infiles/" . $digest . "_infile.json";
-    $outfile = "/var/www/html/AwsTranscribe/var/outfiles/" . $digest . "_outfile.srt";
+    $infile = $this->fileRoot . "/" . "infiles/" . $digest . "_infile.json";
+    $outfile = $this->fileRoot . "/" . "outfiles/" . $digest . "_outfile.srt";
 
     if ($filesystem->exists($outfile)) {
       $this->log->info("Caption file already exists - return it");
       $finder = new Finder();
-      $file = $finder->in("/var/www/html/AwsTranscribe/outfiles")->files()->name($outfile);
+      $file = $finder->in($this->fileRoot . "/" . "outfiles")->files()->name($digest . "_outfile.srt");
       return new Response(
         $file->getContents(),
         200,
-        ['Content-Type' => 'text/plain']
+        [
+          "Content-Type" => "text/plain"
+        ]
       );
     }
+
     if (!$filesystem->exists($infile)) {
       $result = $transcribeClient->startTranscriptionJob([
         'TranscriptionJobName' => $digest,
@@ -231,7 +242,7 @@ class TranscribeController {
         $this->log->info("Python script returned with output: \n");
         $this->log->info(print_r($output, TRUE));
         $finder = new Finder();
-        $file = $finder->in("/var/www/html/AwsTranscribe/outfiles")->files()->name($outfile);
+        $file = $finder->in($this->fileRoot . "/" . "outfiles")->files()->name($outfile);
         return new Response(
           $file->getContents(),
           200,
