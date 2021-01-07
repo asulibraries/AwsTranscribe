@@ -8,6 +8,7 @@ use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -227,15 +228,17 @@ class TranscribeController {
         $output = shell_exec($py_command); //, $output, $retval);
         $this->log->info("Python script returned with output: \n");
         $this->log->info(print_r($output, TRUE));
+        $finder = new Finder();
+        $file = $finder->in("/var/www/html/AwsTranscribe/outfiles")->files()->name($outfile);
         return new Response(
-          file_get_contents($outfile),
+          $file->getContents(),
           200,
           ['Content-Type' => 'text/plain']
         );
       }
       catch (\RuntimeException $e) {
         $this->log->error("RuntimeException:", ['exception' => $e]);
-	      $this->log->error("Failed executing python script");
+        $this->log->error("Failed executing python script");
         return new Response($e->getMessage(), 500);
       }
     }
