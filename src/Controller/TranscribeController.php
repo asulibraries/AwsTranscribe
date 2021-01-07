@@ -178,13 +178,19 @@ class TranscribeController {
       $this->log->info("Caption file already exists - return it");
       $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
       foreach ($files as $file) {
-        return new StreamedResponse(
-          $file->getContents(),
-          200,
-          [
-            "Content-Type" => "text/plain"
-          ]
-        );
+        // return new StreamedResponse(
+        //   $file->getContents(),
+        //   200,
+        //   [
+        //     "Content-Type" => "text/plain"
+        //   ]
+        // );
+        $response = new StreamedResponse($file);
+        $response->setCallback(function ($file) {
+          $file->getContents();
+          flush();
+        });
+        $response->send();
       }
     }
     else {
