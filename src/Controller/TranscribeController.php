@@ -185,6 +185,7 @@ class TranscribeController {
         //     "Content-Type" => "text/plain"
         //   ]
         // );
+        $this->log->info("about to stream the response");
         $response = new StreamedResponse(function () use ($file) {
           $file->getContents();
           flush();
@@ -194,9 +195,6 @@ class TranscribeController {
         // $response->send();
         return $response;
       }
-    }
-    else {
-      exit();
     }
 
     if (!$filesystem->exists($infile)) {
