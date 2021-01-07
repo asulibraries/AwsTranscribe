@@ -185,11 +185,12 @@ class TranscribeController {
         //     "Content-Type" => "text/plain"
         //   ]
         // );
-        $response = new StreamedResponse();
-        $response->setCallback(function ($file) {
+        $response = new StreamedResponse(function ($file) {
           $file->getContents();
           flush();
         });
+        // $response->setCallback();
+        $response->headers->set('Content-Type', 'text/plain');
         $response->send();
       }
     }
