@@ -163,8 +163,10 @@ class TranscribeController {
 
     if ($filesystem->exists($outfile)) {
       $this->log->info("Caption file already exists - return it");
+      $finder = new Finder();
+      $file = $finder->in("/var/www/html/AwsTranscribe/outfiles")->files()->name($outfile);
       return new Response(
-        file_get_contents($outfile),
+        $file->getContents(),
         200,
         ['Content-Type' => 'text/plain']
       );
