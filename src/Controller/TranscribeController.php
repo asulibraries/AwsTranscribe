@@ -191,7 +191,8 @@ class TranscribeController {
         });
         // $response->setCallback();
         $response->headers->set('Content-Type', 'text/plain');
-        $response->send();
+        // $response->send();
+        return $response;
       }
     }
     else {
@@ -265,7 +266,8 @@ class TranscribeController {
           });
           // $response->setCallback();
           $response->headers->set('Content-Type', 'text/plain');
-          $response->send();
+          // $response->send();
+          return $response;
         }
       }
       catch (\RuntimeException $e) {
