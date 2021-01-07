@@ -201,6 +201,11 @@ class TranscribeController {
     try {
       // If we made it here the job completed successfully.
       $this->log->info("transcription job completed");
+      if (!isset($status)) {
+        $status = $transcribeClient->getTranscriptionJob([
+          'TranscriptionJobName' => $digest,
+        ]);
+      }
       $transcript_url = $status->get('TranscriptionJob')['Transcript']['TranscriptFileUri'];
       $client = new Client();
       $json = $client->get($transcript_url);
