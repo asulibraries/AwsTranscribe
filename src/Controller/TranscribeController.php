@@ -172,14 +172,16 @@ class TranscribeController {
     $this->log->info($outfile);
     if ($filesystem->exists($outfile)) {
       $this->log->info("Caption file already exists - return it");
-      $file = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
-      return new Response(
-        $file->getContents(),
-        200,
-        [
-          "Content-Type" => "text/plain"
-        ]
-      );
+      $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
+      foreach ($files as $file) {
+        return new Response(
+          $file->getContents(),
+          200,
+          [
+            "Content-Type" => "text/plain"
+          ]
+        );
+      }
     }
     else {
       exit();
@@ -244,12 +246,16 @@ class TranscribeController {
         $output = shell_exec($py_command); //, $output, $retval);
         $this->log->info("Python script returned with output: \n");
         $this->log->info(print_r($output, TRUE));
-        $file = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
-        return new Response(
-          $file->getContents(),
-          200,
-          ['Content-Type' => 'text/plain']
-        );
+        $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
+        foreach ($files as $file) {
+          return new Response(
+            $file->getContents(),
+            200,
+            [
+              "Content-Type" => "text/plain"
+            ]
+          );
+        }
       }
       catch (\RuntimeException $e) {
         $this->log->error("RuntimeException:", ['exception' => $e]);
