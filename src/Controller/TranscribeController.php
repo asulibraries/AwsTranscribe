@@ -185,7 +185,7 @@ class TranscribeController {
         //     "Content-Type" => "text/plain"
         //   ]
         // );
-        $response = new StreamedResponse(function ($file) {
+        $response = new StreamedResponse(function () use ($file) {
           $file->getContents();
           flush();
         });
