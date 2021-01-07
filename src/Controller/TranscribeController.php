@@ -75,7 +75,7 @@ class TranscribeController {
    */
   public function number(): Response {
     $number = random_int(0, 100);
-    return new Response('<html><body>' . $number . '</body></html>');
+    return new Response('<html><body>' . $number . $this->fileRoot . '</body></html>');
   }
 
   /**
@@ -242,7 +242,7 @@ class TranscribeController {
         $this->log->info("Python script returned with output: \n");
         $this->log->info(print_r($output, TRUE));
         $finder = new Finder();
-        $file = $finder->in($this->fileRoot . "/" . "outfiles")->files()->name($outfile);
+        $file = $finder->in($this->fileRoot . "/" . "outfiles")->files()->name($digest . "_outfile.srt");
         return new Response(
           $file->getContents(),
           200,
