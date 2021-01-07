@@ -166,13 +166,13 @@ class TranscribeController {
       'region' => 'us-east-1',
     ]);
     $filesystem = new Filesystem();
+    $finder = new Finder();
     $infile = $this->fileRoot . "/" . "infiles/" . $digest . "_infile.json";
     $outfile = $this->fileRoot . "/" . "outfiles/" . $digest . "_outfile.srt";
     $this->log->info($outfile);
     if ($filesystem->exists($outfile)) {
       $this->log->info("Caption file already exists - return it");
-      $finder = new Finder();
-      $file = $finder->in($this->fileRoot . "/" . "outfiles")->files()->name($digest . "_outfile.srt");
+      $file = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
       return new Response(
         $file->getContents(),
         200,
@@ -244,8 +244,7 @@ class TranscribeController {
         $output = shell_exec($py_command); //, $output, $retval);
         $this->log->info("Python script returned with output: \n");
         $this->log->info(print_r($output, TRUE));
-        $finder = new Finder();
-        $file = $finder->in($this->fileRoot . "/" . "outfiles")->files()->name($digest . "_outfile.srt");
+        $file = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
         return new Response(
           $file->getContents(),
           200,
