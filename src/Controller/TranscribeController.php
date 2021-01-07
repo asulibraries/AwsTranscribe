@@ -75,7 +75,7 @@ class TranscribeController {
    */
   public function number(): Response {
     $number = random_int(0, 100);
-    return new Response('<html><body>' . $number . $this->fileRoot . '</body></html>');
+    return new Response('<html><body>' . $number . '</body></html>');
   }
 
   /**
@@ -168,7 +168,7 @@ class TranscribeController {
     $filesystem = new Filesystem();
     $infile = $this->fileRoot . "/" . "infiles/" . $digest . "_infile.json";
     $outfile = $this->fileRoot . "/" . "outfiles/" . $digest . "_outfile.srt";
-
+    $this->log->info($outfile);
     if ($filesystem->exists($outfile)) {
       $this->log->info("Caption file already exists - return it");
       $finder = new Finder();
@@ -180,6 +180,9 @@ class TranscribeController {
           "Content-Type" => "text/plain"
         ]
       );
+    }
+    else {
+      exit();
     }
 
     if (!$filesystem->exists($infile)) {
