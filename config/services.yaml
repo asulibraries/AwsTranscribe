@@ -6,7 +6,7 @@
 parameters:
     app.fedoraBaseUrl: 'http://localhost:8080/fcrepo/rest/asuir'
     app.s3Bucket: 'fcrepo-filestore'
-    app.fileRoot: '/var/www/html/AwsTranscibe/var'
+    app.fileRoot: '/var/www/html/AwsTranscribe/var'
 
 framework:
     secret: "I'm not sure what the purpose of this secret is."
