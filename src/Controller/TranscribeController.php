@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use Aws\TranscribeService\TranscribeServiceClient;
-use Aws\S3\S3Client;
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
@@ -11,7 +10,6 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Transcribe Controller.
@@ -147,7 +145,7 @@ class TranscribeController {
    * Start the derivative job from Drupal.
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
-   * @return \Symfony\Component\HttpFoundation\Response|\Symfony\Component\HttpFoundation\StreamedResponse
+   * @return \Symfony\Component\HttpFoundation\Response
    */
   public function startJobFromDrupal(Request $request) {
     $this->log->info('Caption request.');
@@ -185,15 +183,6 @@ class TranscribeController {
             "Content-Type" => "text/plain"
           ]
         );
-        // $this->log->info("about to stream the response");
-        // $response = new StreamedResponse(function () use ($file) {
-        //   $file->getContents();
-        //   flush();
-        // });
-        // // $response->setCallback();
-        // $response->headers->set('Content-Type', 'text/plain');
-        // // $response->send();
-        // return $response;
       }
     }
 
@@ -258,14 +247,13 @@ class TranscribeController {
         $this->log->info(print_r($output, TRUE));
         $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.srt");
         foreach ($files as $file) {
-          $response = new StreamedResponse(function () use ($file) {
-            $file->getContents();
-            flush();
-          });
-          // $response->setCallback();
-          $response->headers->set('Content-Type', 'text/plain');
-          // $response->send();
-          return $response;
+          return new Response(
+            $file->getContents(),
+            200,
+            [
+              "Content-Type" => "text/plain"
+            ]
+          );
         }
       }
       catch (\RuntimeException $e) {
