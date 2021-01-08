@@ -84,7 +84,7 @@ class TranscribeController {
     $client = new TranscribeServiceClient([
       'version' => 'latest',
       'region' => 'us-east-1',
-      'profile' => 'default',
+      'profile' => 'transcribe',
     ]);
     $result = $client->listTranscriptionJobs();
     return new Response($result);
@@ -97,11 +97,12 @@ class TranscribeController {
     $client = new TranscribeServiceClient([
       'version' => 'latest',
       'region' => 'us-east-1',
+      'profile' => 'transcribe',
     ]);
     $result = $client->startTranscriptionJob([
       'TranscriptionJobName' => 'test1',
       'Media' => [
-        'MediaFileUri' => 's3://fcrepo-filestore/19f6648a2fe6f51d228faccd658f77304fd50a3e',
+        'MediaFileUri' => 's3://' . $this->s3Bucket . '/19f6648a2fe6f51d228faccd658f77304fd50a3e',
       ],
       'LanguageCode' => 'en-US',
     ]);
@@ -134,6 +135,7 @@ class TranscribeController {
     $client = new TranscribeServiceClient([
       'version' => 'latest',
       'region' => 'us-east-1',
+      'profile' => 'transcribe',
     ]);
     $result = $client->getTranscriptionJob([
       'TranscriptionJobName' => $job_name,
@@ -166,6 +168,7 @@ class TranscribeController {
     $transcribeClient = new TranscribeServiceClient([
       'version' => 'latest',
       'region' => 'us-east-1',
+      'profile' => 'transcribe',
     ]);
     $filesystem = new Filesystem();
     $finder = new Finder();
@@ -190,7 +193,7 @@ class TranscribeController {
       $result = $transcribeClient->startTranscriptionJob([
         'TranscriptionJobName' => $digest,
         'Media' => [
-          'MediaFileUri' => 's3://fcrepo-filestore/' . $digest,
+          'MediaFileUri' => 's3://' . $this->s3Bucket . '/' . $digest,
         ],
         'LanguageCode' => 'en-US',
       ]);
