@@ -83,7 +83,7 @@ class TranscribeController {
   public function getTranscriptions(): Response {
     $client = new TranscribeServiceClient([
       'version' => 'latest',
-      'region' => 'us-east-1',
+      'region' => 'us-west-2',
       'profile' => 'transcribe',
     ]);
     $result = $client->listTranscriptionJobs();
@@ -96,7 +96,7 @@ class TranscribeController {
   public function createJob(): Response {
     $client = new TranscribeServiceClient([
       'version' => 'latest',
-      'region' => 'us-east-1',
+      'region' => 'us-west-2',
       'profile' => 'transcribe',
     ]);
     $result = $client->startTranscriptionJob([
@@ -134,7 +134,7 @@ class TranscribeController {
   private function getTranscriptJobInfo(string $job_name) {
     $client = new TranscribeServiceClient([
       'version' => 'latest',
-      'region' => 'us-east-1',
+      'region' => 'us-west-2',
       'profile' => 'transcribe',
     ]);
     $result = $client->getTranscriptionJob([
@@ -167,7 +167,7 @@ class TranscribeController {
     $this->log->info($digest);
     $transcribeClient = new TranscribeServiceClient([
       'version' => 'latest',
-      'region' => 'us-east-1',
+      'region' => 'us-west-2',
       'profile' => 'transcribe',
     ]);
     $filesystem = new Filesystem();

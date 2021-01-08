@@ -33,7 +33,7 @@ services:
         class: Aws\S3\S3Client
         arguments:
             -
-                region: us-east-2
+                region: us-west-2
     a_service:
         class: Aws\Credentials\Credentials
         arguments:
