@@ -10,6 +10,8 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 /**
  * Transcribe Controller.
@@ -150,21 +152,47 @@ class TranscribeController {
    * @return \Symfony\Component\HttpFoundation\Response
    */
   public function startJobFromDrupal(Request $request) {
+    $this->log = new Logger('islandora_aws_transcribe');
+    $this->log->pushHandler(new StreamHandler('/var/log/islandora/aws_transcribe.log', Logger::DEBUG));
     $this->log->info('Caption request.');
-    $this->log->info($request->headers->get('Apix-Ldp-Resource'));
     $fedora_url = $request->headers->get('Apix-Ldp-Resource');
-    $this->log->info($this->fedoraBaseUrl);
-    $url_parts = explode('fedora', $fedora_url);
-    // $this->log->info();
-    $fedora_uri = $this->fedoraBaseUrl . end($url_parts);
-    $client = new Client();
-    $fedora_info = $client->get($fedora_uri, ["headers" => ["Want-Digest" => "sha"]]);
-    $this->log->info($fedora_info->getBody());
-    $this->log->info(print_r($fedora_info->getHeaders(), TRUE));
-    $digest = $fedora_info->getHeader('Digest')[0];
-    $digest = str_replace('sha=', '', $digest);
-    $digest = str_replace('sha%3D', '', $digest);
-    $this->log->info($digest);
+    $this->log->info("fedora url is " . $fedora_url);
+    if (str_contains($fedora_url, 's3.us-west-')) {
+      $this->log->info("its an s3 location");
+      $parts = explode('?', $fedora_url);
+      $important_part = $parts[0];
+      $this->log->info("base url is " . $important_part);
+      $bucket_name_re = '/https?:\/\/([^.]*).s3/m';
+      preg_match_all($bucket_name_re, $important_part, $matches, PREG_SET_ORDER, 0);
+      $this->log->info(print_r($matches, TRUE));
+      $bucket_name = $matches[0][1];
+      $this->log->info("bucket name is " . $bucket_name);
+      $path_re = '/https?:\/\/[^\/]*\/(.*)$/m';
+      preg_match_all($path_re, $important_part, $matches2, PREG_SET_ORDER, 0);
+      $path = urldecode($matches2[0][1]);
+      $digest = md5($important_part);
+      $this->log->info("digest is " . $digest);
+      $mediaFileUri = 's3://' . $bucket_name . '/' . $path;
+      $this->log->info("media file URI is " . $mediaFileUri);
+    } else {
+      $this->log->info("its a fedora location");
+      if (str_contains($fedora_url, 'keep.lib')) {
+        $this->fedoraBaseUrl = "http://localhost:8080/fcrepo/rest/asu_ir";
+      }
+      $url_parts = explode('fedora', $fedora_url);
+      // $this->log->info();
+      $fedora_uri = $this->fedoraBaseUrl . end($url_parts);
+      $this->log->info("fedora uri " . $fedora_uri);
+      $client = new Client();
+      $fedora_info = $client->get($fedora_uri, ["headers" => ["Want-Digest" => "sha"]]);
+      //$this->log->info($fedora_info->getBody());
+      $this->log->info(print_r($fedora_info->getHeaders(), TRUE));
+      $digest = $fedora_info->getHeader('Digest')[0];
+      $digest = str_replace('sha=', '', $digest);
+      $digest = str_replace('sha%3D', '', $digest);
+      $mediaFileUri = 's3://' . $this->s3Bucket . '/' . $digest;
+    }
+    $this->log->info("going to talk to the client now");
     $transcribeClient = new TranscribeServiceClient([
       'version' => 'latest',
       'region' => 'us-west-2',
@@ -190,13 +218,16 @@ class TranscribeController {
     }
 
     if (!$filesystem->exists($infile)) {
+      $this->log->info('media file uri is ' . $mediaFileUri);
+      $this->log->info("about to start transcriptionJob");
       $result = $transcribeClient->startTranscriptionJob([
         'TranscriptionJobName' => $digest,
         'Media' => [
-          'MediaFileUri' => 's3://' . $this->s3Bucket . '/' . $digest,
+          'MediaFileUri' => $mediaFileUri,
         ],
         'LanguageCode' => 'en-US',
       ]);
+      $this->log->info("after transcription job start");
       $this->log->info(print_r($result, TRUE));
       $status = [];
       while (TRUE) {
