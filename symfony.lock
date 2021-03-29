@@ -23,8 +23,14 @@
     "guzzlehttp/psr7": {
         "version": "1.7.0"
     },
+    "monolog/monolog": {
+        "version": "2.2.0"
+    },
     "mtdowling/jmespath.php": {
         "version": "2.6.0"
+    },
+    "php": {
+        "version": "7.4"
     },
     "psr/cache": {
         "version": "1.0.1"
