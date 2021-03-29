@@ -10,6 +10,7 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "aws/aws-sdk-php-symfony": "^2.2",
+        "monolog/monolog": "^2.2",
         "symfony/console": "5.2.*",
         "symfony/dotenv": "*",
         "symfony/filesystem": "5.2.*",
