@@ -3,7 +3,9 @@
 namespace App\Controller;
 
 use Aws\TranscribeService\TranscribeServiceClient;
-use GuzzleHttp\Client;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Component\HttpClient\Response\CurlResponse;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -49,6 +51,12 @@ class TranscribeController {
   protected $fileRoot;
 
   /**
+   * @var Symfony\Contracts\HttpClient\HttpClientInterface
+   *   The http client.
+   */
+  private $client;
+
+  /**
    * Controller constructor.
    *
    * @param \Psr\Log\LoggerInterface $log
@@ -65,13 +73,15 @@ class TranscribeController {
     string $fedoraBaseUrl,
     string $fedoras3Bucket,
     string $s3Bucket,
-    string $fileRoot
+    string $fileRoot,
+    HttpClientInterface $client
   ) {
     $this->log = $log;
     $this->fedoraBaseUrl = $fedoraBaseUrl;
     $this->fedoras3Bucket = $fedoras3Bucket;
     $this->s3Bucket = $s3Bucket;
     $this->fileRoot = $fileRoot;
+    $this->client = $client;
   }
 
   /**
@@ -135,8 +145,7 @@ class TranscribeController {
   public function getTranscriptJson(string $job_name): Response {
     $result = $this->getTranscriptJobInfo($job_name);
     $json_url = $result['TranscriptionJob']['Transcript']['TranscriptFileUri'];
-    $client = new Client();
-    $json = $client->get($json_url);
+    $json = $this->client->request('GET', $json_url);
     return new Response($json->getBody());
   }
 
@@ -189,8 +198,7 @@ class TranscribeController {
       $url_parts = explode('fedora', $fedora_url);
       $fedora_uri = $this->fedoraBaseUrl . end($url_parts);
       $this->log->info("fedora uri " . $fedora_uri);
-      $client = new Client();
-      $fedora_info = $client->get($fedora_uri, ["headers" => ["Want-Digest" => "sha"]]);
+      $fedora_info = $this->client->request('GET', $fedora_uri, ["headers" => ["Want-Digest" => "sha"]]);
       //$this->log->info($fedora_info->getBody());
       $this->log->info(print_r($fedora_info->getHeaders(), TRUE));
       $digest = $fedora_info->getHeader('Digest')[0];
@@ -290,8 +298,7 @@ class TranscribeController {
         ]);
       }
       $transcript_url = $status->get('TranscriptionJob')['Transcript']['TranscriptFileUri'];
-      $client = new Client();
-      $json = $client->get($transcript_url);
+      $json = $this->client->request('GET', $transcript_url);
       $json_body = $json->getBody();
       try {
         $filesystem->dumpFile($infile, $json_body);
