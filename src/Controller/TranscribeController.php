@@ -29,6 +29,12 @@ class TranscribeController {
    *   The fedora base url.
    */
   protected $fedoraBaseUrl;
+  
+  /**
+   * @var string
+   *   The fedora s3 bucket.
+   */
+  protected $fedoras3Bucket;
 
   /**
    * @var string
@@ -49,17 +55,21 @@ class TranscribeController {
    *   The logger.
    * @param string $fedoraBaseUrl
    *   The fedora base url.
+   * @param string $fedoras3Bucket
+   *   The fedora s3 bucket
    * @param string $s3Bucket
    *   The s3 bucket
    */
   public function __construct(
     LoggerInterface $log,
     string $fedoraBaseUrl,
+    string $fedoras3Bucket,
     string $s3Bucket,
     string $fileRoot
   ) {
     $this->log = $log;
     $this->fedoraBaseUrl = $fedoraBaseUrl;
+    $this->fedoras3Bucket = $fedoras3Bucket;
     $this->s3Bucket = $s3Bucket;
     $this->fileRoot = $fileRoot;
   }
@@ -104,7 +114,7 @@ class TranscribeController {
     $result = $client->startTranscriptionJob([
       'TranscriptionJobName' => 'test1',
       'Media' => [
-        'MediaFileUri' => 's3://' . $this->s3Bucket . '/19f6648a2fe6f51d228faccd658f77304fd50a3e',
+        'MediaFileUri' => 's3://' . $this->fedoras3Bucket . '/19f6648a2fe6f51d228faccd658f77304fd50a3e',
       ],
       'LanguageCode' => 'en-US',
     ]);
@@ -149,7 +159,7 @@ class TranscribeController {
    * Start the derivative job from Drupal.
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
-   * @return \Symfony\Component\HttpFoundation\Response
+   * @return \Symfony\Component\HttpFoundation\Response|\Symfony\Component\HttpClient\Response\CurlResponse
    */
   public function startJobFromDrupal(Request $request) {
     $this->log = new Logger('islandora_aws_transcribe');
@@ -157,20 +167,15 @@ class TranscribeController {
     $this->log->info('Caption request.');
     $fedora_url = $request->headers->get('Apix-Ldp-Resource');
     $this->log->info("fedora url is " . $fedora_url);
-    if (str_contains($fedora_url, 's3.us-west-')) {
+    if (str_contains($fedora_url, 'cloudfront.net')) {
       $this->log->info("its an s3 location");
-      $parts = explode('?', $fedora_url);
-      $important_part = $parts[0];
-      $this->log->info("base url is " . $important_part);
-      $bucket_name_re = '/https?:\/\/([^.]*).s3/m';
-      preg_match_all($bucket_name_re, $important_part, $matches, PREG_SET_ORDER, 0);
-      $this->log->info(print_r($matches, TRUE));
-      $bucket_name = $matches[0][1];
+      $bucket_name = $this->s3Bucket;
       $this->log->info("bucket name is " . $bucket_name);
-      $path_re = '/https?:\/\/[^\/]*\/(.*)$/m';
-      preg_match_all($path_re, $important_part, $matches2, PREG_SET_ORDER, 0);
+      $path_re = '/https?:\/\/[^\/]*\/([^?]*)?.*$/m';
+      preg_match_all($path_re, $fedora_url, $matches2, PREG_SET_ORDER, 0);
       $path = urldecode($matches2[0][1]);
-      $digest = md5($important_part);
+      $this->log->info("s3 path is " . $path);
+      $digest = md5($path);
       $this->log->info("digest is " . $digest);
       $mediaFileUri = 's3://' . $bucket_name . '/' . $path;
       $this->log->info("media file URI is " . $mediaFileUri);
@@ -178,9 +183,10 @@ class TranscribeController {
       $this->log->info("its a fedora location");
       if (str_contains($fedora_url, 'keep.lib')) {
         $this->fedoraBaseUrl = "http://localhost:8080/fcrepo/rest/asu_ir";
+      } else if (str_contains($fedora_url, 'prism.lib')) {
+        $this->fedoraBaseUrl = "http://localhost:8080/fcrepo/rest/prism";
       }
       $url_parts = explode('fedora', $fedora_url);
-      // $this->log->info();
       $fedora_uri = $this->fedoraBaseUrl . end($url_parts);
       $this->log->info("fedora uri " . $fedora_uri);
       $client = new Client();
@@ -190,7 +196,7 @@ class TranscribeController {
       $digest = $fedora_info->getHeader('Digest')[0];
       $digest = str_replace('sha=', '', $digest);
       $digest = str_replace('sha%3D', '', $digest);
-      $mediaFileUri = 's3://' . $this->s3Bucket . '/' . $digest;
+      $mediaFileUri = 's3://' . $this->fedoras3Bucket . '/' . $digest;
     }
     $this->log->info("going to talk to the client now");
     $transcribeClient = new TranscribeServiceClient([
@@ -207,26 +213,51 @@ class TranscribeController {
       $this->log->info("Caption file already exists - return it");
       $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
       foreach ($files as $file) {
-        return new Response(
-          $file->getContents(),
-          200,
-          [
-            "Content-Type" => "text/plain"
-          ]
-        );
+         
+	$this->log->info("about to put back to drupal");
+         $destinationUri = $request->headers->get('X-Islandora-Destination');
+	try {
+         $headers = [];
+         $headers['Content-Location'] = $request->headers->get('X-Islandora-FileUploadUri');
+         $headers['Content-Type'] = "text/plain";
+         $headers['Authorization'] = $request->headers->get('Authorization');
+	 $this->log->info("sending to " . $destinationUri);
+         $response2 = $client->request(
+                'PUT',
+                $destinationUri,
+                [
+                    'headers' => $headers,
+                    'body' => $file->getContents()
+                ],
+         );
+	 $this->log->info(print_r($response2, TRUE ));
+	 return $response;
+	} catch (\RuntimeException $e){ 
+           $this->log->error("RuntimeException:", ['exception' => $e]);
+            return new Response($e->getMessage(), 500);
+	}
+        //return new Response(
+        //  $file->getContents(),
+        //  200,
+        //  [
+        //    "Content-Type" => "text/plain"
+         // ]
+       // );
       }
     }
 
     if (!$filesystem->exists($infile)) {
       $this->log->info('media file uri is ' . $mediaFileUri);
       $this->log->info("about to start transcriptionJob");
-      $result = $transcribeClient->startTranscriptionJob([
+      $media_job = [
         'TranscriptionJobName' => $digest,
         'Media' => [
           'MediaFileUri' => $mediaFileUri,
         ],
         'LanguageCode' => 'en-US',
-      ]);
+      ];
+      $this->log->info(print_r($media_job, TRUE));
+      $result = $transcribeClient->startTranscriptionJob($media_job);
       $this->log->info("after transcription job start");
       $this->log->info(print_r($result, TRUE));
       $status = [];
