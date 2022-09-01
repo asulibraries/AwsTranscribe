@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use Aws\TranscribeService\TranscribeServiceClient;
+use Aws\TranscribeService\Exception\TranscribeServiceException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Component\HttpClient\Response\CurlResponse;
@@ -146,7 +147,7 @@ class TranscribeController {
     $result = $this->getTranscriptJobInfo($job_name);
     $json_url = $result['TranscriptionJob']['Transcript']['TranscriptFileUri'];
     $json = $this->client->request('GET', $json_url);
-    return new Response($json->getBody());
+    return new Response($json->getContent());
   }
 
   /**
@@ -199,19 +200,12 @@ class TranscribeController {
       $fedora_uri = $this->fedoraBaseUrl . end($url_parts);
       $this->log->info("fedora uri " . $fedora_uri);
       $fedora_info = $this->client->request('GET', $fedora_uri, ["headers" => ["Want-Digest" => "sha"]]);
-      //$this->log->info($fedora_info->getBody());
       $this->log->info(print_r($fedora_info->getHeaders(), TRUE));
       $digest = $fedora_info->getHeader('Digest')[0];
       $digest = str_replace('sha=', '', $digest);
       $digest = str_replace('sha%3D', '', $digest);
       $mediaFileUri = 's3://' . $this->fedoras3Bucket . '/' . $digest;
     }
-    $this->log->info("going to talk to the client now");
-    $transcribeClient = new TranscribeServiceClient([
-      'version' => 'latest',
-      'region' => 'us-west-2',
-      'profile' => 'transcribe',
-    ]);
     $filesystem = new Filesystem();
     $finder = new Finder();
     $infile = $this->fileRoot . "/" . "infiles/" . $digest . "_infile.json";
@@ -230,7 +224,8 @@ class TranscribeController {
          $headers['Content-Type'] = "text/plain";
          $headers['Authorization'] = $request->headers->get('Authorization');
 	 $this->log->info("sending to " . $destinationUri);
-         $response2 = $client->request(
+	 $this->log->info(print_r($headers, TRUE));
+         $response2 = $this->client->request(
                 'PUT',
                 $destinationUri,
                 [
@@ -238,21 +233,25 @@ class TranscribeController {
                     'body' => $file->getContents()
                 ],
          );
-	 $this->log->info(print_r($response2, TRUE ));
-	 return $response;
-	} catch (\RuntimeException $e){ 
-           $this->log->error("RuntimeException:", ['exception' => $e]);
+	 $this->log->info($response2->getStatusCode());
+	 $drupal_put_out = $response2->getContent();
+	 //return $response2;
+	 return new Response($file->getContents(), 200, [
+            "Content-Type" => "text/plain"
+          ]);
+	} catch (\Exception $e){ 
+           $this->log->error("Exception:", ['exception' => $e]);
             return new Response($e->getMessage(), 500);
 	}
-        //return new Response(
-        //  $file->getContents(),
-        //  200,
-        //  [
-        //    "Content-Type" => "text/plain"
-         // ]
-       // );
       }
     }
+
+    $this->log->info("going to talk to the client now");
+    $transcribeClient = new TranscribeServiceClient([
+      'version' => 'latest',
+      'region' => 'us-west-2',
+      'profile' => 'transcribe',
+    ]);
 
     if (!$filesystem->exists($infile)) {
       $this->log->info('media file uri is ' . $mediaFileUri);
@@ -265,9 +264,18 @@ class TranscribeController {
         'LanguageCode' => 'en-US',
       ];
       $this->log->info(print_r($media_job, TRUE));
-      $result = $transcribeClient->startTranscriptionJob($media_job);
-      $this->log->info("after transcription job start");
-      $this->log->info(print_r($result, TRUE));
+      try {
+        $xstatus = $transcribeClient->getTranscriptionJob([
+          'TranscriptionJobName' => $digest,
+        ]);
+      }
+      catch (TranscribeServiceException $e) {
+	$this->log->info("transcript job doesn't exist yet");
+	$this->log->info($e->getAwsErrorMessage());
+        $result = $transcribeClient->startTranscriptionJob($media_job);
+        $this->log->info("after transcription job start");
+        $this->log->info(print_r($result, TRUE));
+      }
       $status = [];
       while (TRUE) {
         $status = $transcribeClient->getTranscriptionJob([
@@ -299,11 +307,11 @@ class TranscribeController {
       }
       $transcript_url = $status->get('TranscriptionJob')['Transcript']['TranscriptFileUri'];
       $json = $this->client->request('GET', $transcript_url);
-      $json_body = $json->getBody();
+      $json_body = $json->getContent();
       try {
         $filesystem->dumpFile($infile, $json_body);
       }
-      catch (IOExceptionInterface $exception) {
+      catch (\Exception $exception) {
         $this->log->error("Could not write json to file");
         $this->log->error($exception);
       }
@@ -319,6 +327,22 @@ class TranscribeController {
         $this->log->info(print_r($output, TRUE));
         $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
         foreach ($files as $file) {
+          $headers = [];
+          $headers['Content-Location'] = $request->headers->get('X-Islandora-FileUploadUri');
+          $headers['Content-Type'] = "text/plain";
+          $headers['Authorization'] = $request->headers->get('Authorization');
+          $this->log->info("sending to " . $destinationUri);
+          $this->log->info(print_r($headers, TRUE));
+          $response2 = $this->client->request(
+                'PUT',
+                $destinationUri,
+                [
+                    'headers' => $headers,
+                    'body' => $file->getContents()
+                ],
+          );
+          $this->log->info($response2->getStatusCode());
+          $drupal_put_out = $response2->getContent();
           return new Response(
             $file->getContents(),
             200,
