@@ -13,8 +13,6 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
 
 /**
  * Transcribe Controller.
@@ -172,8 +170,6 @@ class TranscribeController {
    * @return \Symfony\Component\HttpFoundation\Response|\Symfony\Component\HttpClient\Response\CurlResponse
    */
   public function startJobFromDrupal(Request $request) {
-    $this->log = new Logger('islandora_aws_transcribe');
-    $this->log->pushHandler(new StreamHandler('/var/log/islandora/aws_transcribe.log', Logger::DEBUG));
     $this->log->info('Caption request.');
     $fedora_url = $request->headers->get('Apix-Ldp-Resource');
     $this->log->info("fedora url is " . $fedora_url);
@@ -191,17 +187,17 @@ class TranscribeController {
       $this->log->info("media file URI is " . $mediaFileUri);
     } else {
       $this->log->info("its a fedora location");
-      if (str_contains($fedora_url, 'keep.lib')) {
-        $this->fedoraBaseUrl = "http://localhost:8080/fcrepo/rest/asu_ir";
-      } else if (str_contains($fedora_url, 'prism.lib')) {
-        $this->fedoraBaseUrl = "http://localhost:8080/fcrepo/rest/prism";
+      if (str_contains(parse_url($fedora_url, PHP_URL_HOST), 'keep')) {                                    
+        $this->fedoraBaseUrl = "http://fcrepo:8080/fcrepo/rest/asu_ir";                                    
+      } else if (str_contains(parse_url($fedora_url, PHP_URL_HOST), 'prism')) {                            
+        $this->fedoraBaseUrl = "http://fcrepo:8080/fcrepo/rest/prism";                                     
       }
       $url_parts = explode('fedora', $fedora_url);
       $fedora_uri = $this->fedoraBaseUrl . end($url_parts);
       $this->log->info("fedora uri " . $fedora_uri);
       $fedora_info = $this->client->request('GET', $fedora_uri, ["headers" => ["Want-Digest" => "sha"]]);
       $this->log->info(print_r($fedora_info->getHeaders(), TRUE));
-      $digest = $fedora_info->getHeader('Digest')[0];
+      $digest = $fedora_info->getHeaders()['digest'][0];
       $digest = str_replace('sha=', '', $digest);
       $digest = str_replace('sha%3D', '', $digest);
       $mediaFileUri = 's3://' . $this->fedoras3Bucket . '/' . $digest;

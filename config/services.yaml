@@ -19,7 +19,7 @@ services:
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
         bind:
             $fedoraBaseUrl: '%app.fedoraBaseUrl%'
-            $fedoras3Bucket: '%app.fedoras3Bucket'
+            $fedoras3Bucket: '%app.fedoras3Bucket%'
             $s3Bucket: '%app.s3Bucket%'
             $fileRoot: '%app.fileRoot%'
 
