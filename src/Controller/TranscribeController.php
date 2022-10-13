@@ -266,8 +266,7 @@ class TranscribeController {
         ]);
       }
       catch (TranscribeServiceException $e) {
-	$this->log->info("transcript job doesn't exist yet");
-	$this->log->info($e->getAwsErrorMessage());
+	      $this->log->info("transcript job doesn't exist yet: " . $e->getMessage());
         $result = $transcribeClient->startTranscriptionJob($media_job);
         $this->log->info("after transcription job start");
         $this->log->info(print_r($result, TRUE));
