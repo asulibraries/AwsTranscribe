@@ -18,3 +18,8 @@
 8. make the var directory writable by all
 9. install correlating drupal module `asu_derivatives`
 
+## Development
+
+Use [PHP CS Fixer](https://cs.symfony.com/) for checking code style.
+
+Currently, this service only works for staging and production environments because it relies on the source files living in an S3 bucket storing Fedora (5) binaries. This will eventually need to be updated for Fedora 6 (OCFL instead of Modeshape) and, possibly, a temporary S3 storage space for local testing.
