@@ -201,7 +201,7 @@ class TranscribeController {
       $this->log->info("fedora uri " . $fedora_uri);
       $fedora_info = $this->client->request('GET', $fedora_uri, ["headers" => ["Want-Digest" => "sha"]]);
       $this->log->info(print_r($fedora_info->getHeaders(), TRUE));
-      $digest = $fedora_info->getHeader('Digest')[0];
+      $digest = $fedora_info->getHeaders()['digest'][0];
       $digest = str_replace('sha=', '', $digest);
       $digest = str_replace('sha%3D', '', $digest);
       $mediaFileUri = 's3://' . $this->fedoras3Bucket . '/' . $digest;
