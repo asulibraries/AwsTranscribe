@@ -198,6 +198,12 @@ class TranscribeController {
     if ($filesystem->exists($outfile)) {
       $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
       foreach ($files as $file) {
+        // Don't send empty files.
+        if (filesize($file->getRealPath()) == 0) {
+          return new Response("Transcription was empty.", 200, [
+            "Content-Type" => "text/plain"
+          ]);
+	}
         $destinationUri = $request->headers->get('X-Islandora-Destination');
 	try {
          // Send caption file to Drupal.
@@ -310,6 +316,12 @@ class TranscribeController {
         $this->log->debug("Python script returned with output: \n" . print_r($output, TRUE));
         $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
         foreach ($files as $file) {
+          // Don't send empty files.
+          if (filesize($file->getRealPath()) == 0) {
+            return new Response("Transcription was empty.", 200, [
+              "Content-Type" => "text/plain"
+            ]);
+          }
           // Send the file to Drupal.
           $headers = [];
           $headers['Content-Location'] = $request->headers->get('X-Islandora-FileUploadUri');
