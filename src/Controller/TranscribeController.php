@@ -186,9 +186,9 @@ class TranscribeController {
     if ($filesystem->exists($outfile)) {
       $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
       foreach ($files as $file) {
-        // Don't send empty files.
+        // Empty WebVTT.
         if (filesize($file->getRealPath()) == 0) {
-          return new Response("Transcription was empty.", 200, [
+          return new Response("WEBVTT - This file has no cues.", 200, [
             "Content-Type" => "text/plain"
           ]);
 	}
@@ -304,9 +304,9 @@ class TranscribeController {
         $this->log->debug("Python script returned with output: \n" . print_r($output, TRUE));
         $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
         foreach ($files as $file) {
-          // Don't send empty files.
+          // Empty WebVTT.
           if (filesize($file->getRealPath()) == 0) {
-            return new Response("Transcription was empty.", 200, [
+            return new Response("WEBVTT - This file has no cues.", 200, [
               "Content-Type" => "text/plain"
             ]);
           }
