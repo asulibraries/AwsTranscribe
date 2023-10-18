@@ -9,10 +9,6 @@ app_transcribe_get_jobs:
         path: /get_jobs
         controller: App\Controller\TranscribeController::getTranscriptions
 
-app_transcribe_create_job:
-        path: /create_job
-        controller: App\Controller\TranscribeController::createJob
-
 app_transcribe_get_job:
         path: /get_job/{job_name}
         controller: App\Controller\TranscribeController::getTranscription

@@ -29,18 +29,6 @@ class TranscribeController {
 
   /**
    * @var string
-   *   The fedora base url.
-   */
-  protected $fedoraBaseUrl;
-  
-  /**
-   * @var string
-   *   The fedora s3 bucket.
-   */
-  protected $fedoras3Bucket;
-
-  /**
-   * @var string
    *   The s3 bucket.
    */
   protected $s3Bucket;
