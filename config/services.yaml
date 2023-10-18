@@ -5,8 +5,8 @@
 # https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
 parameters:
     app.fedoraBaseUrl: 'http://localhost:8080/fcrepo/rest/prism'
-    app.fedoras3Bucket: 'islandora-fcrepo-bucket-dev'
-    app.s3Bucket: 'islandora-drupal-ir-bucket-dev'
+    app.fedoras3Bucket: 'islandora-fcrepo-bucket'
+    app.s3Bucket: 'islandora-drupal-ir-bucket'
     app.fileRoot: '/var/www/html/AwsTranscribe/var'
     app.prism_private_path: 'prism/s3fs-private'
     app.keep_private_path: 's3fs-private'
