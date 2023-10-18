@@ -8,6 +8,8 @@ parameters:
     app.fedoras3Bucket: 'islandora-fcrepo-bucket'
     app.s3Bucket: 'islandora-drupal-ir-bucket'
     app.fileRoot: '/var/www/html/AwsTranscribe/var'
+    app.prism_private_path: 'prism/s3fs-private'
+    app.keep_private_path: 's3fs-private'
 
 framework:
     secret: "I'm not sure what the purpose of this secret is."
@@ -19,9 +21,11 @@ services:
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
         bind:
             $fedoraBaseUrl: '%app.fedoraBaseUrl%'
-            $fedoras3Bucket: '%app.fedoras3Bucket'
+            $fedoras3Bucket: '%app.fedoras3Bucket%'
             $s3Bucket: '%app.s3Bucket%'
             $fileRoot: '%app.fileRoot%'
+            $prism_private_path: '%app.prism_private_path%'
+            $keep_private_path: '%app.keep_private_path%'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

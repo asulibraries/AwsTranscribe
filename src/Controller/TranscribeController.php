@@ -52,6 +52,18 @@ class TranscribeController {
   protected $fileRoot;
 
   /**
+   * @var string
+   *   S3 path to PRISM private dir.
+   */
+  protected $prism_private_path;
+
+  /**
+   * @var string
+   *   S3 path to KEEP private dir.
+   */
+  protected $keep_private_path;
+
+  /**
    * @var Symfony\Contracts\HttpClient\HttpClientInterface
    *   The http client.
    */
@@ -62,24 +74,24 @@ class TranscribeController {
    *
    * @param \Psr\Log\LoggerInterface $log
    *   The logger.
-   * @param string $fedoraBaseUrl
-   *   The fedora base url.
-   * @param string $fedoras3Bucket
-   *   The fedora s3 bucket
+   * @param string $keep_private_path
+   *   The KEEP private path.
+   * @param string $prism_private_path
+   *   The PRISM private path.
    * @param string $s3Bucket
    *   The s3 bucket
    */
   public function __construct(
     LoggerInterface $log,
-    string $fedoraBaseUrl,
-    string $fedoras3Bucket,
+    string $keep_private_path,
+    string $prism_private_path,
     string $s3Bucket,
     string $fileRoot,
     HttpClientInterface $client
   ) {
     $this->log = $log;
-    $this->fedoraBaseUrl = $fedoraBaseUrl;
-    $this->fedoras3Bucket = $fedoras3Bucket;
+    $this->keep_private_path = $keep_private_path;
+    $this->prism_private_path = $prism_private_path;
     $this->s3Bucket = $s3Bucket;
     $this->fileRoot = $fileRoot;
     $this->client = $client;
@@ -110,25 +122,6 @@ class TranscribeController {
       'profile' => 'transcribe',
     ]);
     $result = $client->listTranscriptionJobs();
-    return new Response($result);
-  }
-
-  /**
-   * Create Transcription job.
-   */
-  public function createJob(): Response {
-    $client = new TranscribeServiceClient([
-      'version' => 'latest',
-      'region' => 'us-west-2',
-      'profile' => 'transcribe',
-    ]);
-    $result = $client->startTranscriptionJob([
-      'TranscriptionJobName' => 'test1',
-      'Media' => [
-        'MediaFileUri' => 's3://' . $this->fedoras3Bucket . '/19f6648a2fe6f51d228faccd658f77304fd50a3e',
-      ],
-      'LanguageCode' => 'en-US',
-    ]);
     return new Response($result);
   }
 
@@ -175,57 +168,46 @@ class TranscribeController {
     $this->log = new Logger('islandora_aws_transcribe');
     $this->log->pushHandler(new StreamHandler('/var/log/islandora/aws_transcribe.log', Logger::DEBUG));
     $this->log->info('Caption request.');
-    $fedora_url = $request->headers->get('Apix-Ldp-Resource');
-    $this->log->info("fedora url is " . $fedora_url);
-    if (str_contains($fedora_url, 'cloudfront.net')) {
-      $this->log->info("its an s3 location");
-      $bucket_name = $this->s3Bucket;
-      $this->log->info("bucket name is " . $bucket_name);
-      $path_re = '/https?:\/\/[^\/]*\/([^?]*)?.*$/m';
-      preg_match_all($path_re, $fedora_url, $matches2, PREG_SET_ORDER, 0);
-      $path = urldecode($matches2[0][1]);
-      $this->log->info("s3 path is " . $path);
-      $digest = md5($path);
-      $this->log->info("digest is " . $digest);
-      $mediaFileUri = 's3://' . $bucket_name . '/' . $path;
+    $resource_url = $request->headers->get('Apix-Ldp-Resource');
+    $this->log->info("Resource to transcribe url is {$resource_url}");
+    $bucket_name = $this->s3Bucket;
+    if (str_contains($resource_url, 'cloudfront.net')) {
+      // Cloudfront provides the information we need to find the resource.
+      $path = urldecode(parse_url($resource_url, PHP_URL_PATH));
+      $mediaFileUri = "s3://$bucket_name" . $path;
       $this->log->info("media file URI is " . $mediaFileUri);
     } else {
-      $this->log->info("its a fedora location");
-      if (str_contains($fedora_url, 'keep.lib')) {
-        $this->fedoraBaseUrl = "http://localhost:8080/fcrepo/rest/asu_ir";
-      } else if (str_contains($fedora_url, 'prism.lib')) {
-        $this->fedoraBaseUrl = "http://localhost:8080/fcrepo/rest/prism";
+      // The resource is located in a private directory
+      if (preg_match('/keep(-\w+)?\.lib\.asu\.edu/', $resource_url)) {
+        $path = $this->keep_private_path;
+      } else if (preg_match('/prism(-\w+)?\.lib\.asu\.edu/', $resource_url)) {
+        $path = $this->prism_private_path;
       }
-      $url_parts = explode('fedora', $fedora_url);
-      $fedora_uri = $this->fedoraBaseUrl . end($url_parts);
-      $this->log->info("fedora uri " . $fedora_uri);
-      $fedora_info = $this->client->request('GET', $fedora_uri, ["headers" => ["Want-Digest" => "sha"]]);
-      $this->log->info(print_r($fedora_info->getHeaders(), TRUE));
-      $digest = $fedora_info->getHeaders()['digest'][0];
-      $digest = str_replace('sha=', '', $digest);
-      $digest = str_replace('sha%3D', '', $digest);
-      $mediaFileUri = 's3://' . $this->fedoras3Bucket . '/' . $digest;
+      $mediaFileUri = "s3://$bucket_name/$path" . urldecode(parse_url($resource_url, PHP_URL_PATH));
     }
+    // Digest the path to create a reproducable unique identifier for finding
+    // completed transcriptions or existing jobs.
+    $digest = md5($mediaFileUri);
+    $this->log->info($mediaFileUri ." digest is " . $digest);
     $filesystem = new Filesystem();
     $finder = new Finder();
     $infile = $this->fileRoot . "/" . "infiles/" . $digest . "_infile.json";
     $outfile = $this->fileRoot . "/" . "outfiles/" . $digest . "_outfile.vtt";
-    $this->log->info($outfile);
+
+    // Return existing captions if they exist.
     if ($filesystem->exists($outfile)) {
-      $this->log->info("Caption file already exists - return it");
       $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
       foreach ($files as $file) {
-         
-	$this->log->info("about to put back to drupal");
-         $destinationUri = $request->headers->get('X-Islandora-Destination');
+        $destinationUri = $request->headers->get('X-Islandora-Destination');
 	try {
+         // Send caption file to Drupal.
          $headers = [];
          $headers['Content-Location'] = $request->headers->get('X-Islandora-FileUploadUri');
          $headers['Content-Type'] = "text/plain";
          $headers['Authorization'] = $request->headers->get('Authorization');
-	 $this->log->info("sending to " . $destinationUri);
-	 $this->log->info(print_r($headers, TRUE));
-         $response2 = $this->client->request(
+	 $this->log->info("Sending {$file->getRealPath()} to {$destinationUri}");
+	 $this->log->debug(print_r($headers, TRUE));
+         $drupal_response = $this->client->request(
                 'PUT',
                 $destinationUri,
                 [
@@ -233,9 +215,10 @@ class TranscribeController {
                     'body' => $file->getContents()
                 ],
          );
-	 $this->log->info($response2->getStatusCode());
-	 $drupal_put_out = $response2->getContent();
-	 //return $response2;
+	 $this->log->debug($drupal_response->getStatusCode());
+	 $drupal_put_out = $drupal_response->getContent();
+
+	 // Report back to Alpaca.
 	 return new Response($file->getContents(), 200, [
             "Content-Type" => "text/plain"
           ]);
@@ -246,7 +229,7 @@ class TranscribeController {
       }
     }
 
-    $this->log->info("going to talk to the client now");
+    // No existing caption; tell AWSTranscribe to make one.
     $transcribeClient = new TranscribeServiceClient([
       'version' => 'latest',
       'region' => 'us-west-2',
@@ -254,29 +237,32 @@ class TranscribeController {
     ]);
 
     if (!$filesystem->exists($infile)) {
-      $this->log->info('media file uri is ' . $mediaFileUri);
-      $this->log->info("about to start transcriptionJob");
       $media_job = [
         'TranscriptionJobName' => $digest,
         'Media' => [
           'MediaFileUri' => $mediaFileUri,
         ],
-        'LanguageCode' => 'en-US',
+	// Could also use IdentifyMultipleLanguages or supply a list of
+	// languages with LanguageOptions.
+	// See https://docs.aws.amazon.com/transcribe/latest/APIReference/API_StartTranscriptionJob.html.
+        'IdentifyLanguage' => true,
       ];
-      $this->log->info(print_r($media_job, TRUE));
+      $this->log->debug("Job configuration: " . json_encode($media_job));
+
+      // Check if a job is already in progress.
       try {
         $xstatus = $transcribeClient->getTranscriptionJob([
           'TranscriptionJobName' => $digest,
         ]);
       }
       catch (TranscribeServiceException $e) {
-	$this->log->info("transcript job doesn't exist yet");
-	$this->log->info($e->getAwsErrorMessage());
+	$this->log->debug("Transcription job doesn't exist yet: " . $e->getAwsErrorMessage());
         $result = $transcribeClient->startTranscriptionJob($media_job);
-        $this->log->info("after transcription job start");
-        $this->log->info(print_r($result, TRUE));
+        $this->log->debug("Start Transcription job response: " . print_r($result, TRUE));
       }
       $status = [];
+
+      // Wait for the job to complete.
       while (TRUE) {
         $status = $transcribeClient->getTranscriptionJob([
           'TranscriptionJobName' => $digest,
@@ -292,14 +278,14 @@ class TranscribeController {
           return new Response($status->get('TranscriptionJob')['FailureReason'], 500);
         }
 
+	// Give it more time to process before chcking again.
         sleep(5);
       }
     }
 
-    // Return response.
+    // Job completed successfully; return it.
     try {
-      // If we made it here the job completed successfully.
-      $this->log->info("transcription job completed");
+      $this->log->info("AWS transcription job {$digest} completed");
       if (!isset($status)) {
         $status = $transcribeClient->getTranscriptionJob([
           'TranscriptionJobName' => $digest,
@@ -315,25 +301,23 @@ class TranscribeController {
         $this->log->error("Could not write json to file");
         $this->log->error($exception);
       }
-      // $fp = fopen($infile, 'w');
-      // fwrite($fp, json_encode($json_body));
-      // fclose($fp);
-      $this->log->info("wrote the transcript json file to disk");
+
+      $this->log->debug("Converting transcript json file {$infile} to WebVTT {$outfile}");
       $py_command = "/usr/bin/python3 /var/www/html/AwsTranscribe/awstosrt.py " . $infile . " " . $outfile;
       try {
         $py_command = escapeshellcmd($py_command);
         $output = shell_exec($py_command); //, $output, $retval);
-        $this->log->info("Python script returned with output: \n");
-        $this->log->info(print_r($output, TRUE));
+        $this->log->debug("Python script returned with output: \n" . print_r($output, TRUE));
         $files = $finder->files()->in($this->fileRoot . "/" . "outfiles")->name($digest . "_outfile.vtt");
         foreach ($files as $file) {
+          // Send the file to Drupal.
           $headers = [];
           $headers['Content-Location'] = $request->headers->get('X-Islandora-FileUploadUri');
           $headers['Content-Type'] = "text/plain";
           $headers['Authorization'] = $request->headers->get('Authorization');
           $this->log->info("sending to " . $destinationUri);
           $this->log->info(print_r($headers, TRUE));
-          $response2 = $this->client->request(
+          $drupal_response = $this->client->request(
                 'PUT',
                 $destinationUri,
                 [
@@ -341,8 +325,10 @@ class TranscribeController {
                     'body' => $file->getContents()
                 ],
           );
-          $this->log->info($response2->getStatusCode());
-          $drupal_put_out = $response2->getContent();
+	  $this->log->debug($drupal_response->getStatusCode());
+
+	  // Report back to Alpaca.
+          $drupal_put_out = $drupal_response->getContent();
           return new Response(
             $file->getContents(),
             200,
