@@ -1,7 +1,7 @@
 1. git clone this repo
 2. cd into it and composer install
-3. sudo pip3 install srt webvtt-py
-4. set proper configuration values in config/services.yaml - this will include the s3Bucket(s) you're reading from as well as the fedora root
+3. `sudo pip3 install srt webvtt-py`
+4. set proper configuration values in config/services.yaml - this will include the s3Bucket(s) you're reading from and paths used for private files.
 5. start the app `symfony server:start`
     alternatively you could wire this up in apache like
     ```

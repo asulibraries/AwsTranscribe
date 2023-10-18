@@ -2,6 +2,7 @@ import re
 import sys
 import json
 import logging
+import os
 from datetime import timedelta
 
 import srt
@@ -10,8 +11,6 @@ import webvtt
 log = logging.getLogger(__name__)
 log.addHandler(logging.StreamHandler())
 log.setLevel(logging.DEBUG)
-
-sys.path.append("/home/ubuntu/.local/lib/python3.6/site-packages")
 
 ''' Parameters to control subtitle behavior.
 See http://bbc.github.io/subtitle-guidelines/ for recommended practices.
@@ -203,4 +202,5 @@ if __name__ == "__main__":
     t = TranscribeToSRT(infile, outfile)
     t.parse()
     t.write()
-    webvtt.from_srt(outfile).save()
+    if not os.stat(outfile).st_size == 0:
+      webvtt.from_srt(outfile).save()

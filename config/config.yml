@@ -46,7 +46,3 @@ services:
         arguments:
             - '@aws.s3'
             - '@aws.lambda'
-fedora_resource:
-  base_url: http://localhost:8080/fcrepo/rest
-parameters:
-  fedoraBaseUrl: "http://localhost:8080/fcrepo/rest"
