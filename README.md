@@ -1,6 +1,6 @@
 1. git clone this repo
 2. cd into it and composer install
-3. `sudo -u www-data pip3 install srt webvtt-py` or as whatever user the webserver uses.
+3. `sudo pip3 install srt webvtt-py`
 4. set proper configuration values in config/services.yaml - this will include the s3Bucket(s) you're reading from and paths used for private files.
 5. start the app `symfony server:start`
     alternatively you could wire this up in apache like
