@@ -154,7 +154,7 @@ class TranscribeController {
    */
   public function startJobFromDrupal(Request $request) {
     $this->log = new Logger('islandora_aws_transcribe');
-    $this->log->pushHandler(new StreamHandler('/var/log/islandora/aws_transcribe.log', Logger::DEBUG));
+    $this->log->pushHandler(new StreamHandler('/var/log/islandora/aws_transcribe.log', Logger::INFO));
     $this->log->info('Caption request.');
     $resource_url = $request->headers->get('Apix-Ldp-Resource');
     $this->log->info("Resource to transcribe url is {$resource_url}");
@@ -171,7 +171,7 @@ class TranscribeController {
       } else if (preg_match('/prism(-\w+)?\.lib\.asu\.edu/', $resource_url)) {
         $path = $this->prism_private_path;
       }
-      $mediaFileUri = "s3://$bucket_name/$path" . urldecode(parse_url($resource_url, PHP_URL_PATH));
+      $mediaFileUri = "s3://$bucket_name/$path" . str_replace('system/files/', '', urldecode(parse_url($resource_url, PHP_URL_PATH)));
     }
     // Digest the path to create a reproducable unique identifier for finding
     // completed transcriptions or existing jobs.
