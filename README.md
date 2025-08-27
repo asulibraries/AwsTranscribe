@@ -12,7 +12,7 @@ Islandora Microservice to generate WebVTT files using AWS Transcribe using their
 | `KEEP_S3_PREFIX`           | S3 prefix for keep.lib.asu.edu files                         |
 | `PRISM_S3_PREFIX`          | S3 prefix for prism.lib.asu.edu files                        |
 | `TRANSCRIBE_POLL_INTERVAL` | Poll interval in seconds for AWS job completion (default: 5) |
-| `TRANSCRIBE_LANGUAGES`     | Comma-separated list of languages (default: `auto`)          |
+| `TRANSCRIBE_LANGUAGES`     | OPTIONAL comma-separated list of AWS-supported languages     |
 | `AWS_ACCESS_KEY_ID`        | OPTIONAL for development                                     |
 | `AWS_SECRET_ACCESS_KEY`    | OPTIONAL for development                                     |
 
