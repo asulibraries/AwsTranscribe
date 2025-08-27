@@ -52,18 +52,22 @@ async def health_check():
     try:
         s3_client.head_bucket(Bucket=S3_BUCKET)
     except Exception as e:
+        message = f"S3 bucket is not accessible: {e}"
+        logger.error(message)
         raise HTTPException(
             status_code=500,
-            detail=f"S3 bucket '{S3_BUCKET}' is not accessible: {e}"
+            detail=message
         )
 
     # 2. Check AWS Transcribe access by listing jobs (minimal call)
     try:
         transcribe_client.list_transcription_jobs(MaxResults=1)
     except Exception as e:
+        message = f"AWS Transcribe access failed: {e}"
+        logger.error(message)
         raise HTTPException(
             status_code=500,
-            detail=f"AWS Transcribe access failed: {e}"
+            detail=message
         )
 
     return Response(f"Health OK. S3 bucket exists and Transcribe credentials work.", media_type="text/plain")
