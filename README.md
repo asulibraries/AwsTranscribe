@@ -21,7 +21,7 @@ Islandora Microservice to generate WebVTT files using AWS Transcribe using their
 1. Clone the repo
     ```bash
     git clone <repo-url>
-    cd fastapi-transcribe
+    cd AwsTranscribe
     ```
 1. Copy the `.env.example` to `.env` and update the values
 1. Build and run in docker:
@@ -40,11 +40,11 @@ Islandora Microservice to generate WebVTT files using AWS Transcribe using their
     aws ecr get-login-password --region us-west-2 | \
     docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-west-2.amazonaws.com
 
-    aws ecr create-repository --repository-name transcribe
+    aws ecr create-repository --repository-name islandora/transcribe
 
-    docker build -t transcribe .
-    docker tag transcribe:latest <account-id>.dkr.ecr.us-west-2.amazonaws.com/transcribe:latest
-    docker push <account-id>.dkr.ecr.us-west-2.amazonaws.com/transcribe:latest
+    docker build -t islandora/transcribe .
+    docker tag islandora/transcribe:latest <account-id>.dkr.ecr.us-west-2.amazonaws.com/islandora/transcribe:latest
+    docker push <account-id>.dkr.ecr.us-west-2.amazonaws.com/islandora/transcribe:latest
     ```
 1. Create IAM Task Role (provides credentials automatically; no `.env` credentials)
     1. IAM → Roles → Create Role → Elastic Container Service → ECS Task.
