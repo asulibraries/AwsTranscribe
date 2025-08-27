@@ -66,7 +66,7 @@ async def health_check():
             detail=f"AWS Transcribe access failed: {e}"
         )
 
-    return Response(f"Health OK. S3 bucket '{S3_BUCKET}' exists and Transcribe credentials work.", media_type="text/plain")
+    return Response(f"Health OK. S3 bucket exists and Transcribe credentials work.", media_type="text/plain")
 
 
 @app.get("/transcribe")
