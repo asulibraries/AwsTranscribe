@@ -55,7 +55,7 @@ Islandora Microservice to generate WebVTT files using AWS Transcribe using their
 1. ECS Task Definition (Fargate) sample json:
     ```json
     {
-    "family": "fastapi-transcribe",
+    "family": "islandora-transcribe",
     "networkMode": "awsvpc",
     "requiresCompatibilities": ["FARGATE"],
     "cpu": "512",
@@ -64,9 +64,18 @@ Islandora Microservice to generate WebVTT files using AWS Transcribe using their
     "executionRoleArn": "arn:aws:iam::<account-id>:role/ecsTaskExecutionRole",
     "containerDefinitions": [
         {
-        "name": "fastapi-transcribe",
-        "image": "<account-id>.dkr.ecr.us-west-2.amazonaws.com/fastapi-transcribe:latest",
+        "name": "islandora-transcribe",
+        "image": "<account-id>.dkr.ecr.us-west-2.amazonaws.com/islandora/transcribe:latest",
         "essential": true,
+        "healthCheck": {
+            "command": [
+                "CMD-SHELL",
+                "curl -f http://localhost:8000/ || exit 1"
+            ],
+            "interval": 30,
+            "retries": 3,
+            "timeout": 5
+        },
         "portMappings": [
             {
             "containerPort": 8000,
