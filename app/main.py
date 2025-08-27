@@ -14,9 +14,7 @@ REGION = os.getenv("AWS_REGION", "us-west-2")
 KEEP_PREFIX = os.getenv("KEEP_S3_PREFIX", "keep-private/")
 PRISM_PREFIX = os.getenv("PRISM_S3_PREFIX", "prism-private/")
 POLL_INTERVAL = float(os.getenv("TRANSCRIBE_POLL_INTERVAL", "5"))
-LANGUAGES = os.getenv("TRANSCRIBE_LANGUAGES", "auto").split(",")
-
-
+LANGUAGES = list(filter(None, [lang.strip() for lang in os.getenv("TRANSCRIBE_LANGUAGES", '').split(",")]))
 
 # Logger
 logger = logging.getLogger("aws_transcribe")
@@ -70,6 +68,25 @@ async def health_check():
             detail=message
         )
 
+    # 3. Validate LANGUAGES if set
+    if LANGUAGES:
+        valid_codes = [
+            "af-ZA", "ar-AE", "ar-SA", "da-DK", "de-CH", "de-DE",
+            "en-AU", "en-GB", "en-IN", "en-IE", "en-NZ", "en-PH",
+            "en-SA", "en-SG", "en-ZA", "en-TZ", "en-US", "es-ES",
+            "es-US", "fa-IR", "fr-CA", "fr-FR", "he-IL", "hi-IN",
+            "id-ID", "it-IT", "ja-JP", "ko-KR", "ms-MY", "nl-NL",
+            "pt-BR", "pt-PT", "ru-RU", "ta-IN", "te-IN", "th-TH",
+            "tr-TR", "vi-VN", "zh-CN", "zh-TW"
+        ]
+        invalid_codes = [c for c in LANGUAGES if c not in valid_codes]
+        if invalid_codes:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Invalid LANGUAGE_CODES: {invalid_codes}. "
+                       f"Must be subset of: {', '.join(valid_codes)}"
+            )
+
     return Response(f"Health OK. S3 bucket exists and Transcribe credentials work.", media_type="text/plain")
 
 
@@ -110,19 +127,23 @@ async def transcribe_endpoint(
     logger.info(f"Starting transcription for resource: {apix_ldp_resource}")
     logger.info(f"Mapped to S3 key / job name: {s3_key} / {digest}")
 
-    language_code = LANGUAGES[0].strip()
-
     try:
         transcribe.get_transcription_job(TranscriptionJobName=digest)
         logger.info("Job already exists, will poll for completion.")
     except transcribe.exceptions.BadRequestException:
         logger.info("Starting new transcription job...")
-        transcribe.start_transcription_job(
-            TranscriptionJobName=digest,
-            LanguageCode=language_code,
-            Media={"MediaFileUri": s3_key},
-            Subtitles={"Formats": ["vtt"], "OutputStartIndex": 1},
-        )
+        job_args = {
+            'TranscriptionJobName': digest,
+            'Media': {"MediaFileUri": s3_key},
+            'Subtitles': {"Formats": ["vtt"], "OutputStartIndex": 1},
+        }
+        if LANGUAGES:
+            job_args["IdentifyMultipleLanguages"] = True
+            job_args["LanguageOptions"] = LANGUAGES
+        else:
+            job_args["IdentifyLanguage"] = True
+
+        transcribe.start_transcription_job(**job_args)
 
     while True:
         status_resp = transcribe.get_transcription_job(TranscriptionJobName=digest)
