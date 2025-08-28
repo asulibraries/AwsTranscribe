@@ -1,10 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pycache/
+*.sqlite3
 
-###> symfony/framework-bundle ###
-/.env.local
-/.env.local.php
-/.env.*.local
-/config/secrets/prod/prod.decrypt.private.php
-/public/bundles/
-/var/
-/vendor/
-###< symfony/framework-bundle ###
+# Env files / secrets
+.env
+*.env
+aws_credentials
+aws_config
+
+# Docker
+*.log
+*.pid
+*.swp
+*.swo
+docker-compose.override.yml
+
+# IDE / editors
+.vscode/
+.idea/
+*.iml
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
