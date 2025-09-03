@@ -6,6 +6,7 @@ import time
 import requests
 import boto3
 from urllib.parse import urlparse, unquote
+from app.aws2vtt import AWSTranscribeParser
 
 app = FastAPI()
 
@@ -158,9 +159,22 @@ async def transcribe_endpoint(
         logger.info(f"Waiting for transcription to complete... (poll every {POLL_INTERVAL}s)")
         time.sleep(POLL_INTERVAL)
 
-    subtitle_uri = status_resp["TranscriptionJob"]["Subtitles"]["SubtitleFileUris"][0]
-    r = requests.get(subtitle_uri)
-    r.raise_for_status()
-    vtt_content = r.content
+    subtitles = status_resp["TranscriptionJob"].get("Subtitles", {}).get("SubtitleFileUris", [])
+    if len(subtitles) > 0:
+        r = requests.get(subtitles[0])
+        r.raise_for_status()
+        vtt_content = r.content
 
-    return Response(vtt_content, media_type="text/vtt")
+        return Response(vtt_content, media_type="text/vtt")
+    transcript_uri = status_resp["TranscriptionJob"].get("Transcript", {}).get("TranscriptFileUri")
+    if transcript_uri:
+        logger.info(f"Fetching transcript from {transcript_uri} and converting to WebVTT.")
+        r = requests.get(transcript_uri)
+        r.raise_for_status()
+        transcript = r.json()
+        parser = AWSTranscribeParser(transcript)
+        parser.parse()
+        return Response(parser.to_webvtt_string(), media_type="text/vtt")
+
+    # Return error if no subtitles or transcript found.
+    raise HTTPException(status_code=500, detail="Transcription completed but no subtitles or transcript found.")
