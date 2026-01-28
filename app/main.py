@@ -111,7 +111,7 @@ async def transcribe_endpoint(
 
     parsed = urlparse(apix_ldp_resource)
     host = parsed.netloc
-    path = unquote(parsed.path.lstrip('/'))
+    path = unquote(parsed.path.lstrip('/')).removeprefix('system/files/')
     if host.startswith("keep") and "lib.asu.edu" in host:
         s3_key = f"s3://{S3_BUCKET}/{KEEP_PREFIX}{path}"
     elif host.startswith("prism") and "lib.asu.edu" in host:
